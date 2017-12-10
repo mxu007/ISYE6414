@@ -1,5 +1,5 @@
 # ISYE6414 Project
-setwd('D:\\Academics\\Georgia Tech\\Fall\\ISyE 6414 Regression Analysis\\Project\\Video Dataset')
+# setwd('D:\\Academics\\Georgia Tech\\Fall\\ISyE 6414 Regression Analysis\\Project\\Video Dataset')
 library(MASS)
 library(car)
 
@@ -143,13 +143,16 @@ data[HighCDP,]
 
 ####Remove Outliers by Cook's Distance#######
 #Fitting the model again with the influential points removed
-newdata<-data[-HighCDP,]
+set.seed(999)
+# Split the dataset (with outliers removed) by 90% (Train/Validation) and 10% (Final Test)
+newdata_ind <- sample(1:nrow(data[-HighCDP,]), floor(0.9*nrow(data[-HighCDP,])))
+newdata<- (data[-HighCDP,])[newdata_ind,]
+newdata_final_test <- (data[-HighCDP,])[-newdata_ind,]
 
 model_woHighCDP <- lm(log(utime)~.,data=newdata)
 summary(model_woHighCDP)
 
 attach(newdata)
-
 
 #MLR Assumption validation
 res = model_woHighCDP$res
@@ -356,7 +359,7 @@ drop1(model_woHighCDP)
 stepAIC(model_woHighCDP)
 
 
-####Training & Test between Models#######
+####Training & Validatation between Models using 90% of the original dataset#######
 
 # Define Accuracy Metrics 
 # Initiate Mean Square Error
@@ -439,7 +442,6 @@ for (i in seq(length(model_names))) {
   cat("MSE Summary of", model_names[i], "After",num_iter, "Runs :\n")
   print(summary(unlist(list_mse[i])))
 }
-
 
 ####K-fold Cross Validation#######
 
@@ -529,4 +531,24 @@ for (i in seq(length(model_names))) {
   cat("MSE Summary of", model_names[i], "With",k_fold, "Fold Validation :\n")
   print(summary(unlist(list_mse[i])))
 }
+
+
+# Test on model selected using 10% of the original dataset
+X_test_final <- newdata_final_test[,-18]
+y_test_final <- newdata_final_test[,18]
+full_model_final <- lm(log(utime)~.,data=newdata)
+y_predict_full_final <- predict(full_model_final, X_test_final)
+y_predict_full_final <- exp(y_predict_full_final)
+mse_full_final <- mean((y_predict_full_final-y_test_final)^2)
+
+X_train_final <- model.matrix(full_model_final)[,-1]
+X_test_final <- (model.matrix(log(utime)~.,data=newdata_final_test))[,-1]
+y_train_final <- log(newdata[,c('utime')])
+
+# Elastic Net Regression
+elastic_model_cv_final <- cv.glmnet(X_train_final, y_train_final, alpha = 0.5, nfolds=10)
+elastic_model_final <- glmnet(X_train_final, y_train_final, alpha = elastic_model_cv_final$lambda.min)
+y_predict_elastic_final <- predict(elastic_model_final, newx = X_test_final, s= elastic_model_cv_final$lambda.min, type="response")
+y_predict_elastic_final <- exp(y_predict_elastic_final)
+mse_elastic_final <- mean((y_predict_elastic_final-y_test_final)^2)
 
