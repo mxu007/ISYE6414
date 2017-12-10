@@ -141,14 +141,8 @@ HighCDP <- which(cookdist >= 0.05)
 #Printing high influential points
 data[HighCDP,]
 
-####Remove Outliers by Cook's Distance#######
-#Fitting the model again with the influential points removed
-set.seed(999)
-# Split the dataset (with outliers removed) by 90% (Train/Validation) and 10% (Final Test)
-newdata_ind <- sample(1:nrow(data[-HighCDP,]), floor(0.9*nrow(data[-HighCDP,])))
-newdata<- (data[-HighCDP,])[newdata_ind,]
-newdata_final_test <- (data[-HighCDP,])[-newdata_ind,]
-
+# New model using log transformation
+newdata<- (data[-HighCDP,])
 model_woHighCDP <- lm(log(utime)~.,data=newdata)
 summary(model_woHighCDP)
 
@@ -210,6 +204,13 @@ cookdist <- cooks.distance(model_woHighCDP)
 plot(cookdist, main = "Cook's Distance")
 
 detach(newdata)
+
+
+# Split the dataset (with outliers removed) by 90% (Train/Validation) and 10% (Final Test)
+set.seed(999)
+newdata_ind <- sample(1:nrow(data[-HighCDP,]), floor(0.9*nrow(data[-HighCDP,])))
+newdata<- (data[-HighCDP,])[newdata_ind,]
+newdata_final_test <- (data[-HighCDP,])[-newdata_ind,]
 
 ####Train models with different subset of data & Derive Coef#######
 #Number of iterations for running the data
