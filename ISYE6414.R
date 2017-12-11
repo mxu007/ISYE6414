@@ -587,4 +587,21 @@ map_elastic_final <- mean(abs(y_predict_elastic_final-y_test_final)/y_test_final
 # Precision Measure
 pm_elastic_final <- sum((y_predict_elastic_final-y_test_final)^2)/sum((y_test_final-mean(y_test_final))^2)
 
+# Accuracy Metrics Plot
+par(mfrow = c(1,3))
+plot(y_predict_elastic_final-y_test_final, ylab="Squared Error", main= "Squared Error of Elastic Net")
+plot(abs(y_predict_elastic_final-y_test_final), ylab="Absolute Error", main ="Absolute Error of Elastic Net")
+plot(abs(y_predict_elastic_final-y_test_final)/y_test_final, ylab="Absolute Percentage Error", main ="Absolute Percentage Error of Elastic Net")
+
+par(mfrow = c(1,1))
+plot(y_predict_elastic_final,y_test_final)
+par(mfrow = c(1,2))
+plot(y_predict_elastic_final, ylab="Prediction")
+plot(y_test_final, ylab="True Value")
+
+plot(y_predict_full_final-y_test_final, ylab="Squared Error", main= "Squared Error of Full Model")
+plot(abs(y_predict_full_final-y_test_final), ylab="Absolute Error", main ="Absolute Error of Full Model")
+plot(abs(y_predict_full_final-y_test_final)/y_test_final, ylab="Absolute Percentage Error", main ="Absolute Percentage Error of Full Model")
+
+
 ###End of Code###
