@@ -81,7 +81,7 @@ for (col in colnames(data_num)) {
 attach(data)
 
 #Fitting the model
-model <- lm(log(utime)~.,data=data)
+model <- lm(utime~.,data=data)
 summary(model)
 
 #Extracting specific parameter values
