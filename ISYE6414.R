@@ -9,6 +9,13 @@ data <- read.table("transcoding_measurement.tsv", sep='\t', header=TRUE)
 # Remove first column
 data <- data[,-1]
 
+# Split the dataset by 90% (Train/Validation)
+set.seed(999)
+data_ind <- sample(1:nrow(data), floor(0.9*nrow(data)))
+newdata_final_test <- (data[-data_ind,])
+data<- data[data_ind,]
+
+
 #Removing the frames column as i + p + b = frame
 data <- data[ ,-which(names(data) == "frames")]
 
@@ -141,10 +148,11 @@ HighCDP <- which(cookdist >= 0.05)
 #Printing high influential points
 data[HighCDP,]
 
-# New model using log transformation
+# Split the dataset (with outliers removed) by 90% (Train/Validation) and 10% (Final Test)
 newdata<- (data[-HighCDP,])
+
+# New model using log transformation
 model_woHighCDP <- lm(log(utime)~.,data=newdata)
-summary(model_woHighCDP)
 
 attach(newdata)
 
@@ -204,13 +212,6 @@ cookdist <- cooks.distance(model_woHighCDP)
 plot(cookdist, main = "Cook's Distance")
 
 detach(newdata)
-
-
-# Split the dataset (with outliers removed) by 90% (Train/Validation) and 10% (Final Test)
-set.seed(999)
-newdata_ind <- sample(1:nrow(data[-HighCDP,]), floor(0.9*nrow(data[-HighCDP,])))
-newdata<- (data[-HighCDP,])[newdata_ind,]
-newdata_final_test <- (data[-HighCDP,])[-newdata_ind,]
 
 ####Train models with different subset of data & Derive Coef#######
 #Number of iterations for running the data
@@ -369,6 +370,7 @@ mse_full<- mse_step_forward <- mse_step_backward <- mse_step_both <- mse_lasso <
 #set.seed(999)
 # Number of iterations for running the data
 num_iter = 20
+library(glmnet)
 
 for (cnt in seq(num_iter)){
   newdata_train_ind <- sample(1:nrow(newdata), floor(0.8*nrow(newdata)))
