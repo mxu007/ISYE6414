@@ -3,6 +3,7 @@
 library(MASS)
 library(car)
 
+####Read & Clean Data#######
 #Reading the data from file
 data <- read.table("transcoding_measurement.tsv", sep='\t', header=TRUE)
 
@@ -25,12 +26,13 @@ data_num <- data[,sapply(data,is.numeric)]
 round(cor(data_num),2)
 
 # Correlation Matrix
-
 library(corrplot)
+attach(data)
 par(mfrow=c(1,1))
 X = model.matrix(lm(utime ~ ., data = data))[,-1]
-X = cbind(data$utime, X)
+X = cbind(utime, X)
 corrplot(cor(X), tl.cex = 1)
+detach(data)
 
 #Strong correlation seen in height and width variables
 plot(data$height,data$width)
@@ -53,6 +55,8 @@ data_num <- data[,sapply(data,is.numeric)]
 colnames(data_fac)
 colnames(data_num)
 
+
+####Exploratory Data Analysis#######
 # Frequency/Histogram Plot
 par(mfrow=c(4,4))
 for (col in colnames(data_fac)) {
@@ -86,6 +90,8 @@ summary(model)
 coef(summary(model))["duration","Pr(>|t|)"]
 coef(summary(model))["duration","Estimate"]
 
+
+####Check MLR Assumptions#######
 #MLR Assumption validation
 res = model$res
 par(mfrow = c(4,4))
@@ -138,7 +144,6 @@ qqPlot(residuals(model),lwd=1, main = 'Normality of residuals')
 cookdist <- cooks.distance(model)
 plot(cookdist, main = "Cook's Distance")
 detach(data)
-
 
 #Removing outlying points in Cook's dist and reverifying regression model
 HighCDP <- which(cookdist >= 0.05)
@@ -215,7 +220,8 @@ plot(cookdist, main = "Cook's Distance")
 
 detach(newdata)
 
-####Train models with different subset of data & Derive Coef#######
+
+####Train & Test Stability of Coefficients#######
 #Number of iterations for running the data
 num_iter = 20
 
@@ -322,7 +328,6 @@ for (var_index in seq(19, 19+n_model_vars-1)){
 mtext('Stability of coefficient values vs Sample sizes', side = 3, line = -2, outer = TRUE)
 
 if (FALSE){
-####Variable Selection#######
 #STEPWISE REGRESSION
 lowermodel = lm(log(utime)~umem, data = newdata)
 #upper = model_woHighCDP
@@ -343,13 +348,11 @@ coef(lasmodellam, s=lasmodel$lambda.min)
 plot(lasmodellam,xvar='lambda',lwd=2)
 abline(v=log(lasmodel$lambda.min),col='black',lty=2,lwd=2)
 
-
 ###ELASTIC NET###
 X = model.matrix(model_woHighCDP)[,-1]
 modelcv = cv.glmnet(X,newdata[,c('utime')], alpha =.5, nfolds = 10)
 modelcvlam = glmnet(X,newdata[,c('utime')], alpha =.5, nlambda = 100)
 coef(modelcvlam, s=modelcv$lambda.min)
-
 
 ###RIDGE REGRESSION###
 X = model.matrix(model_woHighCDP)[,-1]
@@ -364,9 +367,10 @@ drop1(model_woHighCDP)
 stepAIC(model_woHighCDP)
 }
 
-####Training & Validatation between Models using 90% of the original dataset#######
 
-# Define Accuracy Metrics 
+
+####Training & Validatation#######
+# Define MSE Metrics 
 # Initiate Mean Square Error
 mse_full<- mse_step_forward <- mse_step_backward <- mse_step_both <- mse_lasso <- mse_ridge <- mse_elastic <- NULL
 
@@ -449,9 +453,10 @@ for (i in seq(length(model_names))) {
   print(summary(unlist(list_mse[i])))
 }
 
-####K-fold Cross Validation#######
 
-# Define Accuracy Metrics 
+
+####K-fold Cross Validation#######
+# Define MSE Metrics 
 # Initiate Mean Square Error
 mse_full<- mse_step_forward <- mse_step_backward <- mse_step_both <- mse_lasso <- mse_ridge <- mse_elastic <- NULL
 
@@ -539,6 +544,7 @@ for (i in seq(length(model_names))) {
 }
 
 
+####Prediction & Accuracy#######
 # Test on model selected using 10% of the original dataset
 X_test_final <- newdata_final_test[,-16]
 y_test_final <- newdata_final_test[,16]
@@ -559,12 +565,11 @@ map_full_final <- mean(abs(y_predict_full_final-y_test_final)/y_test_final)
 pm_full_final <- sum((y_predict_full_final-y_test_final)^2)/sum((y_test_final-mean(y_test_final))^2)
 
 
-
 X_train_final <- model.matrix(full_model_final)[,-1]
 X_test_final <- (model.matrix(log(utime)~.,data=newdata_final_test))[,-1]
 y_train_final <- log(newdata[,c('utime')])
 
-# Elastic Net Regression
+# Elastic Net Regression Selected
 elastic_model_cv_final <- cv.glmnet(X_train_final, y_train_final, alpha = 0.5, nfolds=10)
 elastic_model_final <- glmnet(X_train_final, y_train_final, alpha = elastic_model_cv_final$lambda.min)
 y_predict_elastic_final <- predict(elastic_model_final, newx = X_test_final, s= elastic_model_cv_final$lambda.min, type="response")
@@ -582,4 +587,4 @@ map_elastic_final <- mean(abs(y_predict_elastic_final-y_test_final)/y_test_final
 # Precision Measure
 pm_elastic_final <- sum((y_predict_elastic_final-y_test_final)^2)/sum((y_test_final-mean(y_test_final))^2)
 
-# End of Code
+###End of Code###
