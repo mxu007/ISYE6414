@@ -9,13 +9,6 @@ data <- read.table("transcoding_measurement.tsv", sep='\t', header=TRUE)
 # Remove first column
 data <- data[,-1]
 
-# Split the dataset by 90% (Train/Validation)
-set.seed(999)
-data_ind <- sample(1:nrow(data), floor(0.9*nrow(data)))
-newdata_final_test <- (data[-data_ind,])
-data<- data[data_ind,]
-
-
 #Removing the frames column as i + p + b = frame
 data <- data[ ,-which(names(data) == "frames")]
 
@@ -48,6 +41,11 @@ data <- data[ ,-which(names(data) == "width")]
 
 #Removing the width column as its highly correlated with height
 data <- data[ ,-which(names(data) == "o_width")]
+
+# Split the dataset by 90% (Train/Validation)
+data_ind <- sample(1:nrow(data), floor(0.9*nrow(data)))
+newdata_final_test <- (data[-data_ind,])
+data<- data[data_ind,]
 
 # Subset data by either factor or numeric
 data_fac <- data[,sapply(data,is.factor)]
@@ -149,7 +147,11 @@ HighCDP <- which(cookdist >= 0.05)
 data[HighCDP,]
 
 # Split the dataset (with outliers removed) by 90% (Train/Validation) and 10% (Final Test)
-newdata<- (data[-HighCDP,])
+if(length(HighCDP)!=0){
+  newdata<- (data[-HighCDP,])
+} else {
+  newdata <- data
+}
 
 # New model using log transformation
 model_woHighCDP <- lm(log(utime)~.,data=newdata)
@@ -319,6 +321,7 @@ for (var_index in seq(19, 19+n_model_vars-1)){
 }
 mtext('Stability of coefficient values vs Sample sizes', side = 3, line = -2, outer = TRUE)
 
+if (FALSE){
 ####Variable Selection#######
 #STEPWISE REGRESSION
 lowermodel = lm(log(utime)~umem, data = newdata)
@@ -359,7 +362,7 @@ drop1(model_woHighCDP)
 
 #Choose model by AIC, default direction is both
 stepAIC(model_woHighCDP)
-
+}
 
 ####Training & Validatation between Models using 90% of the original dataset#######
 
@@ -452,7 +455,7 @@ for (i in seq(length(model_names))) {
 # Initiate Mean Square Error
 mse_full<- mse_step_forward <- mse_step_backward <- mse_step_both <- mse_lasso <- mse_ridge <- mse_elastic <- NULL
 
-set.seed(999)
+set.seed(10)
 # Number of iterations for running the data
 k_fold = 10
 newdata_cross <- newdata[sample(nrow(newdata)),]
@@ -537,12 +540,25 @@ for (i in seq(length(model_names))) {
 
 
 # Test on model selected using 10% of the original dataset
-X_test_final <- newdata_final_test[,-18]
-y_test_final <- newdata_final_test[,18]
+X_test_final <- newdata_final_test[,-16]
+y_test_final <- newdata_final_test[,16]
 full_model_final <- lm(log(utime)~.,data=newdata)
 y_predict_full_final <- predict(full_model_final, X_test_final)
 y_predict_full_final <- exp(y_predict_full_final)
+
+# Mean Squared Preiction Error
 mse_full_final <- mean((y_predict_full_final-y_test_final)^2)
+
+# Mean Absolute Prediction Error
+mae_full_final <- mean(abs(y_predict_full_final-y_test_final))
+
+# Mean Absolute Percentage Error
+map_full_final <- mean(abs(y_predict_full_final-y_test_final)/y_test_final)
+
+# Precision Measure
+pm_full_final <- sum((y_predict_full_final-y_test_final)^2)/sum((y_test_final-mean(y_test_final))^2)
+
+
 
 X_train_final <- model.matrix(full_model_final)[,-1]
 X_test_final <- (model.matrix(log(utime)~.,data=newdata_final_test))[,-1]
@@ -553,6 +569,17 @@ elastic_model_cv_final <- cv.glmnet(X_train_final, y_train_final, alpha = 0.5, n
 elastic_model_final <- glmnet(X_train_final, y_train_final, alpha = elastic_model_cv_final$lambda.min)
 y_predict_elastic_final <- predict(elastic_model_final, newx = X_test_final, s= elastic_model_cv_final$lambda.min, type="response")
 y_predict_elastic_final <- exp(y_predict_elastic_final)
+
+# Mean Squared Preiction Error
 mse_elastic_final <- mean((y_predict_elastic_final-y_test_final)^2)
+
+# Mean Absolute Prediction Error
+mae_elastic_final <- mean(abs(y_predict_elastic_final-y_test_final))
+
+# Mean Absolute Percentage Error
+map_elastic_final <- mean(abs(y_predict_elastic_final-y_test_final)/y_test_final)
+
+# Precision Measure
+pm_elastic_final <- sum((y_predict_elastic_final-y_test_final)^2)/sum((y_test_final-mean(y_test_final))^2)
 
 # End of Code
