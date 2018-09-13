@@ -1,4 +1,5 @@
-# ISYE6414 Regression Anlaysis Final Project
+# Video Transcoding Analysis
+ISYE6414 Regression Anlaysis Final Project
 Final Group Project for ISYE6414 Regression Analysis Fall'17.
 
 Project Team Members: Byron Kim, Minghan Xu and Shishir Suman
